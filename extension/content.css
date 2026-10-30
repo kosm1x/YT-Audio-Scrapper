@@ -1,0 +1,12 @@
+#ytag-btn {
+  width: auto !important;
+  padding: 0 10px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  opacity: .9;
+}
+#ytag-btn:hover { opacity: 1; }
+#ytag-btn[data-state="ok"] { color: #6dd66d; }
+#ytag-btn[data-state="err"] { color: #ff6b6b; }

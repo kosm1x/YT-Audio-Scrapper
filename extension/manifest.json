@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+  "name": "YT Audio Grabber",
+  "version": "1.0.0",
+  "description": "Download the audio of the YouTube video you are watching with one click (via local yt-dlp).",
+  "browser_specific_settings": {
+    "gecko": { "id": "yt-audio-grabber@local", "strict_min_version": "91.0" }
+  },
+  "permissions": ["nativeMessaging", "storage", "notifications", "*://*.youtube.com/*"],
+  "background": { "scripts": ["background.js"] },
+  "content_scripts": [
+    { "matches": ["*://*.youtube.com/*"], "js": ["content.js"], "css": ["content.css"], "run_at": "document_idle" }
+  ],
+  "browser_action": { "default_title": "YT Audio Grabber", "default_popup": "popup.html" },
+  "commands": {
+    "download-audio": {
+      "suggested_key": { "default": "Alt+Shift+A" },
+      "description": "Download audio of the current video"
+    }
+  }
+}
