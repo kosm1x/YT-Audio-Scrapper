@@ -7,6 +7,14 @@ import struct
 import subprocess
 import sys
 
+IS_WINDOWS = os.name == "nt"
+
+if IS_WINDOWS:
+    # Native messaging is a binary protocol; stop Windows translating \n / Ctrl-Z.
+    import msvcrt
+    msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+
 OUT_DIR = os.environ.get("YT_AUDIO_DIR", os.path.expanduser("~/Music/YT-Audio"))
 FORMATS = {"mp3", "m4a", "opus", "flac"}
 QUALITIES = {"0", "5", "9"}
@@ -41,7 +49,7 @@ def canonical_url(url):
 
 def build_cmd(url, fmt, quality):
     return [
-        "yt-dlp", "--no-playlist", "--newline", "-x",
+        "yt-dlp", "--no-playlist", "--newline", "--encoding", "utf-8", "--windows-filenames", "-x",
         "--audio-format", fmt, "--audio-quality", quality,
         "--embed-metadata", "--embed-thumbnail" if fmt != "opus" else "--no-embed-thumbnail",
         "-P", OUT_DIR, "-o", "%(title).150B [%(id)s].%(ext)s",
@@ -61,12 +69,17 @@ def handle(msg):
     if fmt not in FORMATS or quality not in QUALITIES:
         return send({"type": "error", "error": "Invalid format or quality"})
     os.makedirs(OUT_DIR, exist_ok=True)
+    kwargs = {}
+    if IS_WINDOWS:
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW  # no console flash
     try:
-        proc = subprocess.Popen(build_cmd(url, fmt, quality), stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, text=True)
+        # stderr is merged into stdout so a full pipe can never deadlock us.
+        proc = subprocess.Popen(build_cmd(url, fmt, quality), stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                text=True, encoding="utf-8", errors="replace", **kwargs)
     except FileNotFoundError:
         return send({"type": "error", "error": "yt-dlp not found on PATH (also needs ffmpeg)"})
-    filepath = None
+    filepath, last_err = None, "yt-dlp failed"
     for line in proc.stdout:
         line = line.strip()
         m = re.match(r"PCT\s+([\d.]+)%", line)
@@ -74,12 +87,12 @@ def handle(msg):
             send({"type": "progress", "percent": float(m.group(1))})
         elif line.startswith("FILE "):
             filepath = line[5:]
-    err = proc.stderr.read()
+        elif line.startswith("ERROR"):
+            last_err = line
     if proc.wait() == 0:
         send({"type": "done", "file": filepath})
     else:
-        tail = [l for l in err.strip().splitlines() if l][-1:] or ["yt-dlp failed"]
-        send({"type": "error", "error": tail[0][:300]})
+        send({"type": "error", "error": last_err[:300]})
 
 
 def main():
