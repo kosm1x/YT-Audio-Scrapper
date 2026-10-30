@@ -1,6 +1,6 @@
 # YT Audio Grabber
 
-A Firefox extension that saves the audio of the YouTube video you are watching with one click.
+A Firefox plugin that saves the audio of the YouTube video you are watching with one click.
 
 ## What it does
 
@@ -12,7 +12,7 @@ A Firefox extension that saves the audio of the YouTube video you are watching w
 
 ## How it works
 
-Browser extensions cannot extract or convert audio on their own, so the project has two parts that talk over Firefox's [native messaging](https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/Native_messaging):
+Browser plugins cannot extract or convert audio on their own, so the project has two parts that talk over Firefox's [native messaging](https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/Native_messaging):
 
 ```
 YouTube page ──content.js──▶ background.js ──native messaging──▶ host/yt_audio_host.py ──▶ yt-dlp + ffmpeg
@@ -21,10 +21,10 @@ YouTube page ──content.js──▶ background.js ──native messaging─�
 
 | Path | Role |
 | --- | --- |
-| `extension/manifest.json` | Manifest v2 WebExtension; permissions: `nativeMessaging`, `storage`, `notifications`, `*.youtube.com` |
-| `extension/content.js`, `content.css` | Injects the button into the player; re-injects after YouTube's in-page navigation |
-| `extension/background.js` | Opens the native port, relays progress to the tab, shows notifications, handles the shortcut |
-| `extension/popup.html`, `popup.js` | Format / quality settings (stored in `storage.local`) and a download button |
+| `plugin/manifest.json` | Manifest v2 WebExtension; permissions: `nativeMessaging`, `storage`, `notifications`, `*.youtube.com` |
+| `plugin/content.js`, `content.css` | Injects the button into the player; re-injects after YouTube's in-page navigation |
+| `plugin/background.js` | Opens the native port, relays progress to the tab, shows notifications, handles the shortcut |
+| `plugin/popup.html`, `popup.js` | Format / quality settings (stored in `storage.local`) and a download button |
 | `host/yt_audio_host.py` | Native messaging host: speaks the length-prefixed JSON protocol and runs `yt-dlp` |
 | `host/install.sh` | Registers the host with Firefox (Linux and macOS) |
 | `host/install.ps1`, `host/yt_audio_host.bat` | Registers the host via the Windows registry; the `.bat` launches the Python script |
@@ -36,7 +36,7 @@ There is no server and no open port: the browser launches the host only while a 
 - The host only accepts `https://(www.|m.|music.)youtube.com/watch?v=<id>` and `https://youtu.be/<id>` links. It extracts the 11-character video ID and rebuilds a canonical URL before calling `yt-dlp`, so extra query parameters never reach the command line.
 - `yt-dlp` is invoked with an argument list (no shell) and `--` before the URL.
 - Format and quality are checked against allow-lists.
-- The host manifest limits access to the extension ID `yt-audio-grabber@local`.
+- The host manifest limits access to the plugin ID `yt-audio-grabber@local`.
 
 ## Install
 
@@ -53,7 +53,7 @@ There is no server and no open port: the browser launches the host only while a 
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\host\install.ps1
    ```
-3. Restart Firefox, open `about:debugging` → **This Firefox** → **Load Temporary Add-on…** and choose `extension\manifest.json`.
+3. Restart Firefox, open `about:debugging` → **This Firefox** → **Load Temporary Add-on…** and choose `plugin\manifest.json`.
 4. Open a YouTube video and click **♫ Audio**. Files land in `%USERPROFILE%\Music\YT-Audio`.
 
 Firefox cannot start a `.py` file directly on Windows, so the registry points at `host/yt_audio_host.bat`, which runs the Python script through the `py` launcher (or `python`). The host runs `yt-dlp` with `--windows-filenames` and UTF-8 output, and hides the console window.
@@ -67,9 +67,9 @@ pip install yt-dlp          # plus ffmpeg from your package manager
 ./host/install.sh
 ```
 
-Then load `extension/manifest.json` from `about:debugging` as in step 3 above.
+Then load `plugin/manifest.json` from `about:debugging` as in step 3 above.
 
-A temporary add-on is removed when Firefox restarts. For a permanent install, sign the extension (for example with `web-ext sign` or by submitting it to addons.mozilla.org as unlisted).
+A temporary add-on is removed when Firefox restarts. For a permanent install, sign the plugin (for example with `web-ext sign` or by submitting it to addons.mozilla.org as unlisted).
 
 ## Troubleshooting
 

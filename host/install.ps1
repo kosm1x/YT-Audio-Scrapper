@@ -23,4 +23,4 @@ foreach ($tool in @("py", "python")) { if (Get-Command $tool -ErrorAction Silent
 if (-not $py) { Write-Warning "Python 3 not found. Install: winget install Python.Python.3.12" }
 if (-not (Get-Command yt-dlp -ErrorAction SilentlyContinue)) { Write-Warning "yt-dlp not found. Install: winget install yt-dlp.yt-dlp" }
 if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) { Write-Warning "ffmpeg not found. Install: winget install Gyan.FFmpeg" }
-Write-Host "Done. Restart Firefox, then load extension\manifest.json from about:debugging."
+Write-Host "Done. Restart Firefox, then load plugin\manifest.json from about:debugging."
