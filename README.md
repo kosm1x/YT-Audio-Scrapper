@@ -27,6 +27,7 @@ YouTube page ──content.js──▶ background.js ──native messaging─�
 | `extension/popup.html`, `popup.js` | Format / quality settings (stored in `storage.local`) and a download button |
 | `host/yt_audio_host.py` | Native messaging host: speaks the length-prefixed JSON protocol and runs `yt-dlp` |
 | `host/install.sh` | Registers the host with Firefox (Linux and macOS) |
+| `host/install.ps1`, `host/yt_audio_host.bat` | Registers the host via the Windows registry; the `.bat` launches the Python script |
 
 There is no server and no open port: the browser launches the host only while a download runs.
 
@@ -39,25 +40,50 @@ There is no server and no open port: the browser launches the host only while a 
 
 ## Install
 
-Requirements: Firefox 91+, Python 3, [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), and `ffmpeg`.
+### Windows (primary target)
 
-1. `pip install yt-dlp` and install `ffmpeg` with your package manager.
-2. Register the native host:
-   ```bash
-   ./host/install.sh
+1. Install the tools (PowerShell):
+   ```powershell
+   winget install Python.Python.3.12
+   winget install yt-dlp.yt-dlp
+   winget install Gyan.FFmpeg
    ```
-3. In Firefox open `about:debugging` → **This Firefox** → **Load Temporary Add-on…** and choose `extension/manifest.json`.
-4. Open a YouTube video and click **♫ Audio**.
+   Open a new terminal afterwards so `PATH` is refreshed.
+2. Register the native host (writes `HKCU\Software\Mozilla\NativeMessagingHosts\yt_audio_host`, no admin rights needed):
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\host\install.ps1
+   ```
+3. Restart Firefox, open `about:debugging` → **This Firefox** → **Load Temporary Add-on…** and choose `extension\manifest.json`.
+4. Open a YouTube video and click **♫ Audio**. Files land in `%USERPROFILE%\Music\YT-Audio`.
+
+Firefox cannot start a `.py` file directly on Windows, so the registry points at `host/yt_audio_host.bat`, which runs the Python script through the `py` launcher (or `python`). The host runs `yt-dlp` with `--windows-filenames` and UTF-8 output, and hides the console window.
+
+### Linux / macOS
+
+Requirements: Firefox 91+, Python 3, [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), `ffmpeg`.
+
+```bash
+pip install yt-dlp          # plus ffmpeg from your package manager
+./host/install.sh
+```
+
+Then load `extension/manifest.json` from `about:debugging` as in step 3 above.
 
 A temporary add-on is removed when Firefox restarts. For a permanent install, sign the extension (for example with `web-ext sign` or by submitting it to addons.mozilla.org as unlisted).
+
+## Troubleshooting
+
+- **"Native host unavailable"**: re-run the installer, restart Firefox. On Windows check that the registry key exists and `python --version` (or `py -3 --version`) works in a normal terminal. The Microsoft Store "python" alias does not count; install Python from `winget`.
+- **"yt-dlp not found on PATH"**: install it and open a new terminal/restart Firefox so it sees the updated `PATH`.
+- **Conversion errors**: `ffmpeg` is missing from `PATH`.
+- **YouTube changed and downloads fail**: update the extractor with `yt-dlp -U` (or `winget upgrade yt-dlp.yt-dlp`).
 
 ## Limitations
 
 - Single videos only (`--no-playlist`); no queue or history yet.
-- Windows is not supported: it needs a registry key and a `.bat` wrapper for the host.
-- Not yet tested end to end in a real Firefox session; the host's URL and option validation and the protocol framing were tested in isolation.
+- Not yet tested end to end in a real Firefox session or on a real Windows machine; the host's validation, protocol framing and progress parsing were tested on Linux with a stand-in `yt-dlp`.
 - Download only content you have the right to save. Respect YouTube's Terms of Service and copyright law.
 
 ## Possible next steps
 
-Playlist support, a download queue, a history list, Windows host support, and a custom output folder in the popup.
+Playlist support, a download queue, a history list, and a custom output folder in the popup.
